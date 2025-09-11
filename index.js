@@ -15,7 +15,10 @@ const app = express();
 
 // using middlewares
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173", "https://yatulearn.fun"],
+  methods: ["GET", "POST"],
+}));
 
 const port = process.env.PORT;
 
@@ -29,11 +32,13 @@ app.use("/uploads", express.static("uploads"));
 import userRoutes from "./routes/user.js";
 import courseRoutes from "./routes/course.js";
 import adminRoutes from "./routes/admin.js";
+import roadmapRoutes from "./routes/roadmap.js";
 
 // using routes
 app.use("/api", userRoutes);
 app.use("/api", courseRoutes);
 app.use("/api", adminRoutes);
+app.use("/api/roadmap", roadmapRoutes);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
