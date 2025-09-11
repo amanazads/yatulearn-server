@@ -12,13 +12,18 @@ import { addProgress, getYourProgress } from "../controllers/course.js";
 
 const router = express.Router();
 
-router.post("/user/register", register);
-router.post("/user/verify", verifyUser);
-router.post("/user/login", loginUser);
-router.get("/user/me", isAuth, myProfile);
-router.post("/user/forgot", forgotPassword);
-router.post("/user/reset", resetPassword);
-router.post("/user/progress", isAuth, addProgress);
-router.get("/user/progress", isAuth, getYourProgress);
+// ✅ Auth
+router.post("/register", register);
+router.post("/verify", verifyUser);
+router.post("/login", loginUser);
+router.get("/me", isAuth, myProfile);
+
+// ✅ Password
+router.post("/forgot", forgotPassword);
+router.post("/reset", resetPassword);
+
+// ✅ Course progress (user-specific)
+router.post("/progress", isAuth, addProgress);
+router.get("/progress", isAuth, getYourProgress);
 
 export default router;
