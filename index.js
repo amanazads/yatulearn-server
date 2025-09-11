@@ -17,11 +17,23 @@ const app = express();
 // Middlewares
 app.use(express.json());
 
-// ✅ Simplified CORS: allow all origins
+// ✅ Safe CORS: allow only whitelisted origins and support credentials
+const allowedOrigins = [
+  "https://www.yatulearn.fun",
+  "http://localhost:5173",
+];
+
 app.use(cors({
-  origin: "*", // allow requests from any origin
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // allowed HTTP methods
-  credentials: true, // allow cookies/auth headers (note: some browsers ignore credentials with *)
+  origin: function (origin, callback) {
+    // allow requests with no origin (like Postman or mobile apps)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error("CORS policy: Origin not allowed"), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true, // allow cookies/auth headers
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 }));
 
 // Test route
