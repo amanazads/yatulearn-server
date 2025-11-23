@@ -6,7 +6,10 @@ export const isAuth = async (req, res, next) => {
     // Try common locations for a token
     let token = req.headers.authorization || req.headers.Authorization;
 
-    // If no Authorization header, try x-access-token
+    // If no Authorization header, try custom 'token' header (used by frontend)
+    if (!token) token = req.headers.token || req.headers.Token;
+    
+    // Also try x-access-token
     if (!token) token = req.headers['x-access-token'];
 
     // If still no token, attempt to parse from cookie header (simple parse, no dependency)

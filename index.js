@@ -17,13 +17,14 @@ const app = express();
 // middleware
 app.use(express.json());
 
-// Configure CORS to allow Authorization header and credentials
+// Configure CORS to allow custom token header and credentials
 app.use(
   cors({
     origin: true,
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
-    exposedHeaders: ["Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "token", "x-access-token"],
+    exposedHeaders: ["Authorization", "token"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   })
 );
 
