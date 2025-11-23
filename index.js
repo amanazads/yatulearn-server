@@ -2,6 +2,13 @@ import express from "express";
 import dotenv from "dotenv";
 import { connectDb } from "./database/db.js";
 import cors from "cors";
+import { isAuth } from "./middlewares/isAuth.js";
+import {
+  register,
+  loginUser,
+  myProfile,
+} from "./controllers/user.js";
+import { getMyCourses } from "./controllers/course.js";
 
 dotenv.config();
 
@@ -9,7 +16,16 @@ const app = express();
 
 // middleware
 app.use(express.json());
-app.use(cors());
+
+// Configure CORS to allow Authorization header and credentials
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Authorization"],
+  })
+);
 
 const port = process.env.PORT || 8080;
 
@@ -22,6 +38,12 @@ import adminRoutes from "./routes/admin.js";
 app.use("/api", userRoutes);
 app.use("/api", courseRoutes);
 app.use("/api", adminRoutes);
+
+// Short fallback routes to support clients that call legacy endpoints without `/api` or `/user` prefix
+app.post("/register", register);
+app.post("/login", loginUser);
+app.get("/me", isAuth, myProfile);
+app.get("/mycourse", isAuth, getMyCourses);
 
 app.get("/", (req, res) => {
   res.json({
