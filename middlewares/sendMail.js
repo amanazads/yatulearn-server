@@ -4,10 +4,14 @@ const sendMail = async (email, subject, data) => {
   const transport = createTransport({
     host: "smtp.gmail.com",
     port: 465,
+    secure: true,
     auth: {
       user: process.env.Gmail,
       pass: process.env.Password,
     },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
 
   const html = `<!DOCTYPE html>
@@ -71,10 +75,14 @@ export const sendForgotMail = async (subject, data) => {
   const transport = createTransport({
     host: "smtp.gmail.com",
     port: 465,
+    secure: true,
     auth: {
       user: process.env.Gmail,
       pass: process.env.Password,
     },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
 
   const html = `<!DOCTYPE html>

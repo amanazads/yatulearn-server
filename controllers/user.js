@@ -38,25 +38,20 @@ export const register = TryCatch(async (req, res) => {
 
     console.log(`📧 Sending OTP ${otp} to ${email}`);
 
-    // Send email with OTP
-    try {
-      await sendMail(email, "YATU Learn - Verify Your Email Address", { name, otp });
-      console.log("✅ Email sent successfully to inbox");
+    // Send response immediately (don't wait for email)
+    res.status(200).json({
+      message: "OTP sent to your email! Please check your inbox and spam folder.",
+      activationToken,
+    });
 
-      res.status(200).json({
-        message: "OTP sent to your email! Please check your inbox and spam folder.",
-        activationToken,
+    // Send email asynchronously (non-blocking)
+    sendMail(email, "YATU Learn - Verify Your Email Address", { name, otp })
+      .then(() => {
+        console.log("✅ Email sent successfully to inbox");
+      })
+      .catch((emailError) => {
+        console.error("❌ Email sending failed:", emailError.message);
       });
-
-    } catch (emailError) {
-      console.error("❌ Email sending failed:", emailError.message);
-      
-      // Still allow registration but inform user about email issue
-      res.status(200).json({
-        message: `Registration successful! Email service temporarily unavailable. Your OTP is: ${otp}`,
-        activationToken,
-      });
-    }
 
   } catch (error) {
     console.error("💥 Registration error:", error);
