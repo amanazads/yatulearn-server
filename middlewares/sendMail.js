@@ -1,6 +1,15 @@
 import { createTransport } from "nodemailer";
 
 const sendMail = async (email, subject, data) => {
+  // Validate environment variables
+  if (!process.env.Gmail || !process.env.Password) {
+    console.error("❌ Missing email configuration:", {
+      hasGmail: !!process.env.Gmail,
+      hasPassword: !!process.env.Password,
+    });
+    throw new Error("Email configuration missing. Please set Gmail and Password environment variables.");
+  }
+
   const transport = createTransport({
     host: "smtp.gmail.com",
     port: 465,
@@ -13,6 +22,15 @@ const sendMail = async (email, subject, data) => {
     greetingTimeout: 10000,
     socketTimeout: 15000,
   });
+
+  // Verify connection before sending
+  try {
+    await transport.verify();
+    console.log("✅ SMTP connection verified");
+  } catch (error) {
+    console.error("❌ SMTP verification failed:", error.message);
+    throw new Error("Email server connection failed. Please check your Gmail credentials.");
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="en">

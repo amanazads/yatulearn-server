@@ -47,10 +47,15 @@ export const register = TryCatch(async (req, res) => {
     // Send email asynchronously (non-blocking)
     sendMail(email, "YATU Learn - Verify Your Email Address", { name, otp })
       .then(() => {
-        console.log("✅ Email sent successfully to inbox");
+        console.log("✅ Email sent successfully to:", email);
       })
       .catch((emailError) => {
-        console.error("❌ Email sending failed:", emailError.message);
+        console.error("❌ Email sending failed:", emailError);
+        console.error("Email config check:", {
+          hasGmail: !!process.env.Gmail,
+          hasPassword: !!process.env.Password,
+          gmail: process.env.Gmail,
+        });
       });
 
   } catch (error) {
