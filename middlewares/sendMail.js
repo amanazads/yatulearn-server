@@ -75,23 +75,31 @@ const sendMail = async (email, subject, data) => {
 `;
 
   console.log("[sendMail] Sending email to:", email);
-  const info = await transport.sendMail({
-    from: process.env.Gmail,
-    to: email,
-    subject,
-    html,
-  });
-  console.log("[sendMail] Email sent successfully. Message ID:", info.messageId);
-  return info;
+  try {
+    const info = await transport.sendMail({
+      from: process.env.Gmail,
+      to: email,
+      subject,
+      html,
+    });
+    console.log("[sendMail] ✅ Email sent successfully!");
+    console.log("[sendMail] Message ID:", info.messageId);
+    console.log("[sendMail] Response:", info.response);
+    return info;
+  } catch (error) {
+    console.error("[sendMail] ❌ Failed to send email:");
+    console.error("[sendMail] Error:", error.message);
+    console.error("[sendMail] Code:", error.code);
+    console.error("[sendMail] Command:", error.command);
+    throw error;
+  }
 };
 
 export default sendMail;
 
 export const sendForgotMail = async (subject, data) => {
   const transport = createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    service: 'gmail',
     auth: {
       user: process.env.Gmail,
       pass: process.env.Password,
