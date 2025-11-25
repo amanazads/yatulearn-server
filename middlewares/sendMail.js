@@ -6,11 +6,8 @@ const sendMail = async (email, subject, data) => {
   // Check if we should use Resend (preferred) or Gmail fallback
   const useResend = !!process.env.RESEND_API_KEY;
   
-  if (useResend) {
-    console.log("[sendMail] Using Resend API");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const resend = useResend ? new Resend(process.env.RESEND_API_KEY) : null;
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -131,10 +128,8 @@ export default sendMail;
 
 export const sendForgotMail = async (subject, data) => {
   const useResend = !!process.env.RESEND_API_KEY;
-  
-  if (useResend) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const resend = useResend ? new Resend(process.env.RESEND_API_KEY) : null;
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
