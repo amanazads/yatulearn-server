@@ -1,36 +1,16 @@
-import { createTransport } from "nodemailer";
+import { Resend } from 'resend';
 
 const sendMail = async (email, subject, data) => {
   console.log("[sendMail] Started for:", email);
   
-  // Validate environment variables
-  if (!process.env.Gmail || !process.env.Password) {
-    console.error("❌ Missing email configuration:", {
-      hasGmail: !!process.env.Gmail,
-      hasPassword: !!process.env.Password,
-    });
-    throw new Error("Email configuration missing. Please set Gmail and Password environment variables.");
-  }
+  // Check if we should use Resend (preferred) or Gmail fallback
+  const useResend = !!process.env.RESEND_API_KEY;
   
-  console.log("[sendMail] Config validated. Gmail:", process.env.Gmail, "Password length:", process.env.Password.length);
-
-  const transport = createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.Gmail,
-      pass: process.env.Password,
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-  });
-
-  console.log("[sendMail] Transport created (port 587), attempting to send...");
+  if (useResend) {
+    console.log("[sendMail] Using Resend API");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -43,81 +23,118 @@ const sendMail = async (email, subject, data) => {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            background-color: #f5f5f5;
         }
         .container {
             background-color: #fff;
-            padding: 20px;
+            padding: 30px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             text-align: center;
+            max-width: 500px;
+            margin: 40px auto;
         }
         h1 {
-            color: red;
+            color: #7b68ee;
+            margin-bottom: 20px;
         }
         p {
             margin-bottom: 20px;
             color: #666;
+            font-size: 16px;
         }
         .otp {
-            font-size: 36px;
-            color: #7b68ee; /* Purple text */
-            margin-bottom: 30px;
+            font-size: 40px;
+            font-weight: bold;
+            color: #7b68ee;
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+            letter-spacing: 8px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>OTP Verification</h1>
-        <p>Hello ${data.name} your (One-Time Password) for your account verification is.</p>
-        <p class="otp">${data.otp}</p> 
+        <h1>YATU Learn - Email Verification</h1>
+        <p>Hello ${data.name}!</p>
+        <p>Your One-Time Password (OTP) for account verification is:</p>
+        <div class="otp">${data.otp}</div>
+        <p style="color: #999; font-size: 14px;">This OTP will expire in 5 minutes.</p>
     </div>
 </body>
 </html>
 `;
 
   console.log("[sendMail] Sending email to:", email);
-  try {
-    const info = await transport.sendMail({
-      from: process.env.Gmail,
-      to: email,
-      subject,
-      html,
+  
+  if (useResend) {
+    try {
+      const { data: responseData, error } = await resend.emails.send({
+        from: fromEmail,
+        to: email,
+        subject: subject,
+        html: html,
+      });
+
+      if (error) {
+        console.error("[sendMail] ❌ Resend error:", error);
+        throw error;
+      }
+
+      console.log("[sendMail] ✅ Email sent successfully via Resend!");
+      console.log("[sendMail] Message ID:", responseData.id);
+      return responseData;
+    } catch (error) {
+      console.error("[sendMail] ❌ Failed to send via Resend:", error.message);
+      throw error;
+    }
+  } else {
+    // Fallback to Gmail SMTP (might not work on Render)
+    console.log("[sendMail] ⚠️ Using Gmail SMTP (may fail on Render)");
+    const { createTransport } = await import('nodemailer');
+    
+    if (!process.env.Gmail || !process.env.Password) {
+      throw new Error("Gmail credentials not configured");
+    }
+    
+    const transport = createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.Gmail,
+        pass: process.env.Password,
+      },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 30000,
     });
-    console.log("[sendMail] ✅ Email sent successfully!");
-    console.log("[sendMail] Message ID:", info.messageId);
-    console.log("[sendMail] Response:", info.response);
-    return info;
-  } catch (error) {
-    console.error("[sendMail] ❌ Failed to send email:");
-    console.error("[sendMail] Error:", error.message);
-    console.error("[sendMail] Code:", error.code);
-    console.error("[sendMail] Command:", error.command);
-    throw error;
+
+    try {
+      const info = await transport.sendMail({
+        from: process.env.Gmail,
+        to: email,
+        subject,
+        html,
+      });
+      console.log("[sendMail] ✅ Email sent via Gmail!");
+      return info;
+    } catch (error) {
+      console.error("[sendMail] ❌ Gmail SMTP failed:", error.message);
+      throw error;
+    }
   }
 };
 
 export default sendMail;
 
 export const sendForgotMail = async (subject, data) => {
-  const transport = createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.Gmail,
-      pass: process.env.Password,
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-  });
+  const useResend = !!process.env.RESEND_API_KEY;
+  
+  if (useResend) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -183,10 +200,38 @@ export const sendForgotMail = async (subject, data) => {
 </html>
 `;
 
-  await transport.sendMail({
-    from: process.env.Gmail,
-    to: data.email,
-    subject,
-    html,
-  });
+  if (useResend) {
+    const { data: responseData, error } = await resend.emails.send({
+      from: fromEmail,
+      to: data.email,
+      subject: subject,
+      html: html,
+    });
+
+    if (error) {
+      throw error;
+    }
+    return responseData;
+  } else {
+    // Gmail SMTP fallback
+    const { createTransport } = await import('nodemailer');
+    const transport = createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.Gmail,
+        pass: process.env.Password,
+      },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 30000,
+    });
+
+    return await transport.sendMail({
+      from: process.env.Gmail,
+      to: data.email,
+      subject,
+      html,
+    });
+  }
 };

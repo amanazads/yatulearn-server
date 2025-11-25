@@ -34,20 +34,31 @@ PORT=8080
 NODE_ENV=development
 ```
 
-### 3. Gmail App Password Setup (REQUIRED for email to work)
+### 3. Email Service Setup
 
-⚠️ **Important**: Gmail no longer accepts regular passwords for SMTP. You MUST use an App Password.
+**Option A: Resend (RECOMMENDED - works on all platforms including Render)**
 
-**Steps to create Gmail App Password:**
+1. Sign up at https://resend.com (free 3,000 emails/month)
+2. Get your API key from dashboard
+3. Add to `.env`:
+   ```
+   RESEND_API_KEY=re_xxxxxxxxxxxxx
+   RESEND_FROM_EMAIL=onboarding@resend.dev
+   ```
+4. That's it! ✅
 
-1. Go to your Google Account: https://myaccount.google.com/
-2. Enable 2-Step Verification (if not already enabled)
-3. Go to https://myaccount.google.com/apppasswords
-4. Select "Mail" as the app
-5. Select "Other" as the device and name it "YATU Learn"
-6. Click "Generate"
-7. Copy the 16-character password (format: xxxx xxxx xxxx xxxx)
-8. Use this password in your `.env` file as `Password=xxxxxxxxxxxxxxxx` (without spaces)
+**Option B: Gmail SMTP (may not work on Render due to blocked ports)**
+
+⚠️ Gmail SMTP often doesn't work on cloud platforms like Render.
+
+If you still want to try:
+1. Go to https://myaccount.google.com/apppasswords
+2. Generate a 16-character App Password
+3. Add to `.env`:
+   ```
+   Gmail=your_email@gmail.com
+   Password=xxxxxxxxxxxxxxxx
+   ```
 
 ### 4. Run the Server
 
@@ -68,16 +79,20 @@ Make sure to set these environment variables in Render dashboard:
 - `Jwt_Sec` - Secret key for JWT tokens
 - `Activation_Secret` - Secret key for activation tokens
 - `Forgot_Secret` - Secret key for password reset tokens
-- `Gmail` - Your Gmail address
-- `Password` - Gmail App Password (16 characters, no spaces)
+- `RESEND_API_KEY` - Your Resend API key (get from https://resend.com)
+- `RESEND_FROM_EMAIL` - `onboarding@resend.dev` (or your verified domain)
 - `frontendurl` - Your frontend URL (e.g., https://www.yatulearn.fun)
 - `NODE_ENV` - Set to `production`
+
+**Optional (Gmail fallback - not recommended for Render):**
+- `Gmail` - Your Gmail address
+- `Password` - Gmail App Password
 
 ## Common Issues
 
 ### Email not sending
-- Verify you're using a Gmail **App Password**, not your regular password
-- Check server logs for specific error messages
-- Ensure 2-Step Verification is enabled on your Google account
-- Make sure `Gmail` and `Password` env variables are set correctly
+- **Use Resend instead of Gmail** - it's more reliable on cloud platforms
+- Check Render logs for email errors
+- Verify `RESEND_API_KEY` is set correctly
+- Make sure you're using `onboarding@resend.dev` or a verified domain
 
