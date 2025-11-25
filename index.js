@@ -52,6 +52,21 @@ app.get("/", (req, res) => {
   });
 });
 
+// Email configuration check endpoint
+app.get("/api/health/email", (req, res) => {
+  const hasGmail = !!process.env.Gmail;
+  const hasPassword = !!process.env.Password;
+  const passwordLength = process.env.Password?.length || 0;
+  
+  res.json({
+    status: hasGmail && hasPassword && passwordLength === 16 ? "✅ Ready" : "❌ Not configured",
+    gmail: hasGmail ? process.env.Gmail : "❌ Not set",
+    password: hasPassword ? `✓ Set (${passwordLength} chars)` : "❌ Not set",
+    expectedPasswordLength: 16,
+    note: passwordLength !== 16 && hasPassword ? "⚠️ Gmail App Password should be exactly 16 characters" : null,
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
   connectDb();
