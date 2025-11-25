@@ -1,6 +1,8 @@
 import { createTransport } from "nodemailer";
 
 const sendMail = async (email, subject, data) => {
+  console.log("[sendMail] Started for:", email);
+  
   // Validate environment variables
   if (!process.env.Gmail || !process.env.Password) {
     console.error("❌ Missing email configuration:", {
@@ -9,28 +11,21 @@ const sendMail = async (email, subject, data) => {
     });
     throw new Error("Email configuration missing. Please set Gmail and Password environment variables.");
   }
+  
+  console.log("[sendMail] Config validated. Gmail:", process.env.Gmail, "Password length:", process.env.Password.length);
 
   const transport = createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    service: 'gmail',
     auth: {
       user: process.env.Gmail,
       pass: process.env.Password,
     },
-    connectionTimeout: 10000, // 10 seconds
+    connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
   });
 
-  // Verify connection before sending
-  try {
-    await transport.verify();
-    console.log("✅ SMTP connection verified");
-  } catch (error) {
-    console.error("❌ SMTP verification failed:", error.message);
-    throw new Error("Email server connection failed. Please check your Gmail credentials.");
-  }
+  console.log("[sendMail] Transport created, attempting to send...");
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -79,12 +74,15 @@ const sendMail = async (email, subject, data) => {
 </html>
 `;
 
-  await transport.sendMail({
+  console.log("[sendMail] Sending email to:", email);
+  const info = await transport.sendMail({
     from: process.env.Gmail,
     to: email,
     subject,
     html,
   });
+  console.log("[sendMail] Email sent successfully. Message ID:", info.messageId);
+  return info;
 };
 
 export default sendMail;

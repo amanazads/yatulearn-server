@@ -36,7 +36,13 @@ export const register = TryCatch(async (req, res) => {
       { expiresIn: "5m" }
     );
 
-    console.log(`📧 Sending OTP ${otp} to ${email}`);
+    console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
+    console.log("Email config:", {
+      hasGmail: !!process.env.Gmail,
+      hasPassword: !!process.env.Password,
+      passwordLength: process.env.Password?.length || 0,
+      gmail: process.env.Gmail,
+    });
 
     // Send response immediately (don't wait for email)
     res.status(200).json({
@@ -45,17 +51,15 @@ export const register = TryCatch(async (req, res) => {
     });
 
     // Send email asynchronously (non-blocking)
+    console.log("🔄 Starting email send process...");
     sendMail(email, "YATU Learn - Verify Your Email Address", { name, otp })
       .then(() => {
-        console.log("✅ Email sent successfully to:", email);
+        console.log("✅ SUCCESS: Email sent to", email, "at", new Date().toISOString());
       })
       .catch((emailError) => {
-        console.error("❌ Email sending failed:", emailError);
-        console.error("Email config check:", {
-          hasGmail: !!process.env.Gmail,
-          hasPassword: !!process.env.Password,
-          gmail: process.env.Gmail,
-        });
+        console.error("❌ FAILED: Email sending error at", new Date().toISOString());
+        console.error("Error message:", emailError.message);
+        console.error("Error stack:", emailError.stack);
       });
 
   } catch (error) {
