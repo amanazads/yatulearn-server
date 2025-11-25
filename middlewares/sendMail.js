@@ -15,17 +15,22 @@ const sendMail = async (email, subject, data) => {
   console.log("[sendMail] Config validated. Gmail:", process.env.Gmail, "Password length:", process.env.Password.length);
 
   const transport = createTransport({
-    service: 'gmail',
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true for 465, false for other ports
     auth: {
       user: process.env.Gmail,
       pass: process.env.Password,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
   });
 
-  console.log("[sendMail] Transport created, attempting to send...");
+  console.log("[sendMail] Transport created (port 587), attempting to send...");
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -99,14 +104,19 @@ export default sendMail;
 
 export const sendForgotMail = async (subject, data) => {
   const transport = createTransport({
-    service: 'gmail',
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
     auth: {
       user: process.env.Gmail,
       pass: process.env.Password,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
   });
 
   const html = `<!DOCTYPE html>

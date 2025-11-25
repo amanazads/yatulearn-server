@@ -59,7 +59,12 @@ export const register = TryCatch(async (req, res) => {
       .catch((emailError) => {
         console.error("❌ FAILED: Email sending error at", new Date().toISOString());
         console.error("Error message:", emailError.message);
-        console.error("Error stack:", emailError.stack);
+        console.error("Error code:", emailError.code);
+        console.error("\n⚠️ EMAIL FAILED - OTP FOR MANUAL DELIVERY:");
+        console.error(`📧 Email: ${email}`);
+        console.error(`🔑 OTP: ${otp}`);
+        console.error(`👤 Name: ${name}`);
+        console.error("⚠️ PLEASE SEND THIS OTP TO THE USER MANUALLY\n");
       });
 
   } catch (error) {
