@@ -18,7 +18,11 @@ app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins =
       process.env.NODE_ENV === "production"
-        ? [process.env.FRONTEND_URL].filter(Boolean)
+        ? [
+            "https://www.yatulearn.fun",
+            "https://yatulearn.fun",
+            "https://yatulearn-frontend.vercel.app",
+          ]
         : ["http://localhost:3000", "http://localhost:5173"];
 
     // Allow requests with no origin (curl, Postman, mobile apps)
