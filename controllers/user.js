@@ -1,127 +1,77 @@
 import { User } from "../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import sendMail from "../middlewares/sendMail.js";
+import sendMail, { sendForgotMail } from "../middlewares/sendMail.js";
 import TryCatch from "../middlewares/TryCatch.js";
 
 export const register = TryCatch(async (req, res) => {
-  try {
-    console.log("🚀 Registration started");
-    const { name, email, password } = req.body;
+  const { email, name, password } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        message: "Name, email and password are required",
-      });
+  let user = await User.findOne({ email });
+
+  if (user)
+    return res.status(400).json({
+      message: "User Already exists",
+    });
+
+  const hashPassword = await bcrypt.hash(password, 10);
+
+  user = {
+    name,
+    email,
+    password: hashPassword,
+  };
+
+  const otp = Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+
+  const activationToken = jwt.sign(
+    {
+      user,
+      otp,
+    },
+    process.env.Activation_Secret,
+    {
+      expiresIn: "5m",
     }
+  );
 
-    // Check if user exists
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({
-        message: "User Already exists",
-      });
-    }
+  const data = {
+    name,
+    otp,
+  };
 
-    // Hash password
-    const hashPassword = await bcrypt.hash(password, 10);
+  await sendMail(email, "YATU Learn", data);
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000);
-
-    // Create activation token
-    const activationToken = jwt.sign(
-      { name, email, password: hashPassword, otp },
-      process.env.Activation_Secret,
-      { expiresIn: "5m" }
-    );
-
-    console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
-    console.log("Email config:", {
-      hasGmail: !!process.env.Gmail,
-      hasPassword: !!process.env.Password,
-      passwordLength: process.env.Password?.length || 0,
-      gmail: process.env.Gmail,
-    });
-
-    // Send response immediately (don't wait for email)
-    res.status(200).json({
-      message: "OTP sent to your email! Please check your inbox and spam folder.",
-      activationToken,
-    });
-
-    // Send email asynchronously (non-blocking)
-    console.log("🔄 Starting email send process...");
-    sendMail(email, "YATU Learn - Verify Your Email Address", { name, otp })
-      .then(() => {
-        console.log("✅ SUCCESS: Email sent to", email, "at", new Date().toISOString());
-      })
-      .catch((emailError) => {
-        console.error("❌ FAILED: Email sending error at", new Date().toISOString());
-        console.error("Error message:", emailError.message);
-        console.error("Error code:", emailError.code);
-        console.error("\n⚠️ EMAIL FAILED - OTP FOR MANUAL DELIVERY:");
-        console.error(`📧 Email: ${email}`);
-        console.error(`🔑 OTP: ${otp}`);
-        console.error(`👤 Name: ${name}`);
-        console.error("⚠️ PLEASE SEND THIS OTP TO THE USER MANUALLY\n");
-      });
-
-  } catch (error) {
-    console.error("💥 Registration error:", error);
-    res.status(500).json({
-      message: "Internal server error during registration",
-      error: error.message
-    });
-  }
+  res.status(200).json({
+    message: "Otp send to your mail",
+    activationToken,
+  });
 });
 
 export const verifyUser = TryCatch(async (req, res) => {
   const { otp, activationToken } = req.body;
 
-  console.log("🔍 Verification request:", { otp, hasToken: !!activationToken });
+  const verify = jwt.verify(activationToken, process.env.Activation_Secret);
 
-  if (!otp || !activationToken) {
+  if (!verify)
     return res.status(400).json({
-      message: "Please provide OTP and activation token",
-    });
-  }
-
-  try {
-    const verify = jwt.verify(activationToken, process.env.Activation_Secret);
-    console.log("✅ Token verified, comparing OTP:", verify.otp, "vs", parseInt(otp));
-
-    if (verify.otp !== parseInt(otp)) {
-      return res.status(400).json({
-        message: "Wrong OTP",
-      });
-    }
-
-    console.log("👤 Creating user in database");
-    await User.create({
-      name: verify.name,
-      email: verify.email,
-      password: verify.password,
+      message: "Otp Expired",
     });
 
-    console.log("✅ User created successfully");
+  if (String(verify.otp) !== String(otp))
+    return res.status(400).json({
+      message: "Wrong Otp",
+    });
 
-    res.json({
-      message: "User Registered Successfully",
-    });
-  } catch (error) {
-    console.error("💥 Verification error:", error);
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(400).json({
-        message: "OTP expired. Please register again.",
-      });
-    }
-    
-    res.status(400).json({
-      message: "Invalid OTP or token",
-    });
-  }
+  await User.create({
+    name: verify.user.name,
+    email: verify.user.email,
+    password: verify.user.password,
+  });
+
+  res.json({
+    message: "User Registered",
+  });
 });
 
 export const loginUser = TryCatch(async (req, res) => {
@@ -129,19 +79,17 @@ export const loginUser = TryCatch(async (req, res) => {
 
   const user = await User.findOne({ email });
 
-  if (!user) {
+  if (!user)
     return res.status(400).json({
       message: "No User with this email",
     });
-  }
 
   const mathPassword = await bcrypt.compare(password, user.password);
 
-  if (!mathPassword) {
+  if (!mathPassword)
     return res.status(400).json({
-      message: "Wrong Password",
+      message: "wrong Password",
     });
-  }
 
   const token = jwt.sign({ _id: user._id }, process.env.Jwt_Sec, {
     expiresIn: "15d",
@@ -150,21 +98,14 @@ export const loginUser = TryCatch(async (req, res) => {
   res.json({
     message: `Welcome back ${user.name}`,
     token,
-    user: {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
+    user,
   });
 });
 
 export const myProfile = TryCatch(async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password");
+  const user = await User.findById(req.user._id);
 
-  res.json({
-    user,
-  });
+  res.json({ user });
 });
 
 export const forgotPassword = TryCatch(async (req, res) => {
@@ -172,11 +113,10 @@ export const forgotPassword = TryCatch(async (req, res) => {
 
   const user = await User.findOne({ email });
 
-  if (!user) {
+  if (!user)
     return res.status(404).json({
       message: "No User with this email",
     });
-  }
 
   const token = jwt.sign({ email }, process.env.Forgot_Secret, {
     expiresIn: "5m",
@@ -184,34 +124,45 @@ export const forgotPassword = TryCatch(async (req, res) => {
 
   const data = { email, token };
 
-  await sendMail(email, "YATU Learn Password Reset", data);
+  await sendForgotMail("E learning", data);
 
-  res.json({
-    message: "Password reset link sent to your email",
-  });
-});
-
-export const resetPassword = TryCatch(async (req, res) => {
-  const { token } = req.params;
-  const { password } = req.body;
-
-  const decodedData = jwt.verify(token, process.env.Forgot_Secret);
-
-  const user = await User.findOne({ email: decodedData.email });
-
-  if (!user) {
-    return res.status(404).json({
-      message: "No user with this email",
-    });
-  }
-
-  const hashPassword = await bcrypt.hash(password, 10);
-
-  user.password = hashPassword;
+  user.resetPasswordExpire = Date.now() + 5 * 60 * 1000;
 
   await user.save();
 
   res.json({
-    message: "Password Reset Successfully",
+    message: "Reset Password Link is send to you mail",
   });
+});
+
+export const resetPassword = TryCatch(async (req, res) => {
+  const decodedData = jwt.verify(req.query.token, process.env.Forgot_Secret);
+
+  const user = await User.findOne({ email: decodedData.email });
+
+  if (!user)
+    return res.status(404).json({
+      message: "No user with this email",
+    });
+
+  if (user.resetPasswordExpire === null)
+    return res.status(400).json({
+      message: "Token Expired",
+    });
+
+  if (user.resetPasswordExpire < Date.now()) {
+    return res.status(400).json({
+      message: "Token Expired",
+    });
+  }
+
+  const password = await bcrypt.hash(req.body.password, 10);
+
+  user.password = password;
+
+  user.resetPasswordExpire = null;
+
+  await user.save();
+
+  res.json({ message: "Password Reset" });
 });
