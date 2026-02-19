@@ -17,6 +17,9 @@ export const getAllCourses = TryCatch(async (req, res) => {
 export const getSingleCourse = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
 
+  if (!course)
+    return res.status(404).json({ message: "Course not found" });
+
   res.json({
     course,
   });
@@ -133,12 +136,21 @@ export const paymentVerification = TryCatch(async (req, res) => {
 });
 
 export const addProgress = TryCatch(async (req, res) => {
-  const progress = await Progress.findOne({
+  let progress = await Progress.findOne({
     user: req.user._id,
     course: req.query.course,
   });
 
   const { lectureId } = req.query;
+
+  // Create progress doc if it doesn't exist
+  if (!progress) {
+    progress = await Progress.create({
+      user: req.user._id,
+      course: req.query.course,
+      completedLectures: [],
+    });
+  }
 
   if (progress.completedLectures.includes(lectureId)) {
     return res.json({
@@ -161,12 +173,18 @@ export const getYourProgress = TryCatch(async (req, res) => {
     course: req.query.course,
   });
 
-  if (!progress) return res.status(404).json({ message: "null" });
-
   const allLectures = (await Lecture.find({ course: req.query.course })).length;
 
-  const completedLectures = progress[0].completedLectures.length;
+  if (!progress || progress.length === 0 || allLectures === 0) {
+    return res.json({
+      courseProgressPercentage: 0,
+      completedLectures: 0,
+      allLectures,
+      progress: [],
+    });
+  }
 
+  const completedLectures = progress[0].completedLectures.length;
   const courseProgressPercentage = (completedLectures * 100) / allLectures;
 
   res.json({

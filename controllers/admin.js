@@ -72,13 +72,17 @@ export const deleteCourse = TryCatch(async (req, res) => {
 
   await Promise.all(
     lectures.map(async (lecture) => {
-      await unlinkAsync(lecture.video);
-      console.log("video deleted");
+      try {
+        await unlinkAsync(lecture.video);
+        console.log("video deleted");
+      } catch {
+        console.log("video file not found, skipping");
+      }
     })
   );
 
-  rm(course.image, () => {
-    console.log("image deleted");
+  rm(course.image, (err) => {
+    if (!err) console.log("image deleted");
   });
 
   await Lecture.find({ course: req.params.id }).deleteMany();
